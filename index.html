@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RI Map Visualization</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    #map {
+      width: 100%;
+      height: 400px;
+    }
+    #controls {
+      margin: 10px;
+      text-align: center;
+    }
+    #info {
+      margin: 10px;
+      font-size: 16px;
+      line-height: 1.5;
+    }
+    video {
+      max-width: 100%;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>RI Map Visualization</h1>
+  <div id="map"></div>
+  <video id="video" autoplay></video>
+  <canvas id="canvas" style="display: none;"></canvas>
+  <div id="info">
+    <p><b>Heading:</b> <span id="heading">N/A</span>°</p>
+    <p><b>Right Position:</b> Lat: <span id="right-lat">N/A</span>, Lon: <span id="right-lon">N/A</span></p>
+    <p><b>Left Position:</b> Lat: <span id="left-lat">N/A</span>, Lon: <span id="left-lon">N/A</span></p>
+  </div>
+  <div id="controls">
+    <button id="start">Start</button>
+    <button id="download">Download CSV</button>
+  </div>
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const ctx = canvas.getContext("2d");
+    const startButton = document.getElementById("start");
+    const downloadButton = document.getElementById("download");
+
+    const headingDisplay = document.getElementById("heading");
+    const rightLatDisplay = document.getElementById("right-lat");
+    const rightLonDisplay = document.getElementById("right-lon");
+    const leftLatDisplay = document.getElementById("left-lat");
+    const leftLonDisplay = document.getElementById("left-lon");
+
+    let recording = false;
+    let logData = [["Timestamp", "Latitude", "Longitude", "Heading", "Right Latitude", "Right Longitude", "Left Latitude", "Left Longitude", "Area_Rate_rightRI", "Area_Rate_leftRI"]];
+    let intervalId = null;
+    let currentLocation = null;
+    let heading = 0;
+
+    // Leafletマップの初期化
+    const map = L.map("map").setView([0, 0], 2);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+    }).addTo(map);
+
+    // グループレイヤーを作成してログを保持
+    const markersGroup = L.layerGroup().addTo(map);
+
+    // カメラ映像を開始
+    async function startCamera() {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        video.play();
+      } catch (err) {
+        console.error("Error accessing camera:", err);
+      }
+    }
+
+    // GPSデータの取得
+    function trackGPS() {
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(
+          (position) => {
+            currentLocation = {
+              latitude: position.coords.latitude,
+              longitude: position.coords.longitude,
+            };
+            map.setView([currentLocation.latitude, currentLocation.longitude], 15);
+          },
+          (err) => {
+            console.error("Error getting location:", err);
+            currentLocation = null;
+          }
+        );
+      } else {
+        console.error("Geolocation is not supported by this browser.");
+      }
+    }
+
+    // 方位角を取得
+    function trackHeading() {
+      if (window.DeviceOrientationEvent) {
+        window.addEventListener("deviceorientation", (event) => {
+          if (event.alpha !== null) {
+            heading = event.alpha;
+            headingDisplay.textContent = heading.toFixed(2);
+          }
+        });
+      } else {
+        console.error("Device Orientation not supported by this browser.");
+      }
+    }
+
+    // 緯度経度の計算
+    function calculateOffsetCoordinates(lat, lon, angle, distance) {
+      const earthRadius = 6378137;
+      const rad = (deg) => (deg * Math.PI) / 180;
+      const deg = (rad) => (rad * 180) / Math.PI;
+
+      const latRad = rad(lat);
+      const lonRad = rad(lon);
+      const angleRad = rad(angle);
+
+      const newLatRad = Math.asin(
+        Math.sin(latRad) * Math.cos(distance / earthRadius) +
+          Math.cos(latRad) * Math.sin(distance / earthRadius) * Math.cos(angleRad)
+      );
+
+      const newLonRad =
+        lonRad +
+        Math.atan2(
+          Math.sin(angleRad) * Math.sin(distance / earthRadius) * Math.cos(latRad),
+          Math.cos(distance / earthRadius) - Math.sin(latRad) * Math.sin(newLatRad)
+        );
+
+      return { latitude: deg(newLatRad), longitude: deg(newLonRad) };
+    }
+
+    // RI (Red Index) 計算と面積率の計算
+    function calculateAreaRate(imageData, width, height) {
+      let leftCount = 0;
+      let rightCount = 0;
+      let leftTotal = 0;
+      let rightTotal = 0;
+
+      for (let y = Math.floor(height / 2); y < height; y++) {
+        for (let x = 0; x < width; x++) {
+          const index = (y * width + x) * 4;
+          const r = imageData[index];
+          const g = imageData[index + 1];
+
+          const ri = (r - g) / (r + g + 1e-5); // RI計算
+
+          if (ri >= 0.154 && ri <= 0.232) {
+            imageData[index] = 255; // 赤く塗りつぶす
+            imageData[index + 1] = 0;
+            imageData[index + 2] = 0;
+
+            if (x < width / 2) leftCount++;
+            else rightCount++;
+          }
+
+          if (x < width / 2) leftTotal++;
+          else rightTotal++;
+        }
+      }
+
+      const areaRateLeft = leftCount / leftTotal; // 左領域の面積率
+      const areaRateRight = rightCount / rightTotal; // 右領域の面積率
+
+      ctx.putImageData(new ImageData(imageData, width, height), 0, 0); // 描画更新
+
+      return { areaRateLeft, areaRateRight };
+    }
+
+    // データ取得処理
+    function processFrame() {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const { areaRateLeft, areaRateRight } = calculateAreaRate(frame.data, canvas.width, canvas.height);
+
+      const timestamp = new Date().toISOString();
+      const latitude = currentLocation?.latitude || 0;
+      const longitude = currentLocation?.longitude || 0;
+
+      const rightCoords = calculateOffsetCoordinates(latitude, longitude, heading + 45, 10);
+      const leftCoords = calculateOffsetCoordinates(latitude, longitude, heading - 45, 10);
+
+      rightLatDisplay.textContent = rightCoords.latitude.toFixed(6);
+      rightLonDisplay.textContent = rightCoords.longitude.toFixed(6);
+      leftLatDisplay.textContent = leftCoords.latitude.toFixed(6);
+      leftLonDisplay.textContent = leftCoords.longitude.toFixed(6);
+
+      // ログを地図上に追加
+      const rightCircle = L.circle([rightCoords.latitude, rightCoords.longitude], {
+        color: areaRateRight >= 0.08 ? "red" : "blue",
+        fillColor: areaRateRight >= 0.08 ? "red" : "blue",
+        fillOpacity: 0.5,
+        radius: areaRateRight * 100,
+      }).bindPopup(`Right Area Rate: ${(areaRateRight * 100).toFixed(2)}%`);
+
+      const leftCircle = L.circle([leftCoords.latitude, leftCoords.longitude], {
+        color: areaRateLeft >= 0.08 ? "red" : "blue",
+        fillColor: areaRateLeft >= 0.08 ? "red" : "blue",
+        fillOpacity: 0.5,
+        radius: areaRateLeft * 100,
+      }).bindPopup(`Left Area Rate: ${(areaRateLeft * 100).toFixed(2)}%`);
+
+      rightCircle.addTo(markersGroup);
+      leftCircle.addTo(markersGroup);
+
+      logData.push([
+        timestamp,
+        latitude,
+        longitude,
+        heading.toFixed(2),
+        rightCoords.latitude.toFixed(6),
+        rightCoords.longitude.toFixed(6),
+        leftCoords.latitude.toFixed(6),
+        leftCoords.longitude.toFixed(6),
+        areaRateRight.toFixed(4),
+        areaRateLeft.toFixed(4),
+      ]);
+    }
+
+    // CSVダウンロード
+    function downloadCSV() {
+      const csvContent = logData.map((row) => row.join(",")).join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "ri_area_rate_log.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    // イベントリスナー
+    startButton.addEventListener("click", () => {
+      if (!recording) {
+        recording = true;
+        intervalId = setInterval(processFrame, 3000);
+        startButton.textContent = "Stop";
+      } else {
+        recording = false;
+        clearInterval(intervalId);
+        startButton.textContent = "Start";
+      }
+    });
+
+    downloadButton.addEventListener("click", downloadCSV);
+
+    startCamera();
+    trackGPS();
+    trackHeading();
+  </script>
+</body>
+</html>
