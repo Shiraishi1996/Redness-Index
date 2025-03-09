@@ -1081,7 +1081,7 @@ if st.session_state["button_clicked"]:
                 lon_mean = st.number_input("経度を入力してください", format="%.4f", step=0.0001,value=lon)
                 date = st.date_input("日付（開始日）を選択してください",format="YYYY-MM-DD", value=datetime.today())
                 date2 = st.date_input("日付（終日）を選択してください",format="YYYY-MM-DD", value=datetime.today())
-                max_value = st.number_input("出力する被災建物の個数を入力してください（※最大被災建物個数を超えるとエラーがでます。）", format="%.0f", step=float(1),min_value=float(1))
+                max_value = st.number_input("出力する被災建物の個数を入力してください（※最大被災建物個数を超えるとエラーがでます。）", format="%.0f", step=float(1),min_value=float(2))
                 
                 # 送信ボタン
                 submitted = st.form_submit_button("送信")
