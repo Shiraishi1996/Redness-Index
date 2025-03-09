@@ -1012,11 +1012,12 @@ st.markdown(
 )
  
 # カスタムスタイルを適用したヘッダー
-st.markdown('<div class="custom-header">被災地域マッピング</div>', unsafe_allow_html=True)
+st.markdown('<div class="custom-header">RaBDET-GVF Rapid Building Damage Extraction Technology from Ground-Based Video Footage</div>', unsafe_allow_html=True)
  
 # カスタムスタイルを適用したコンテナ
 with st.container():
-    st.markdown('<div class="custom-container">本マッピング技術は、筑波大学大学院システム情報工学研究群 白石、臼田 著「Real-Time Building-Damage-Extraction Technology from Ground-Based Video Footage Using Normalized Difference Red/Green Redness Index(2025)」をもとに生成しております。</div>', unsafe_allow_html=True)
+    st.markdown('<div class="custom-container">本マッピング技術は、筑波大学大学院システム情報工学研究群 白石、臼田 著「Real-Time Building-Damage-Extraction Technology from Ground-Based Video Footage Using Normalized Difference Red/Green Redness Index(2025)」をもとに生成しております。
+     迅速かつ正確に被害の建物を抽出するための技術です。時期と場所を指定すれば、「いつ」「どこで」「どのくらい（規模）の」被害があったのかをストリートビューデータベースやドライブレコーダー画像から抽出することができます。</div>', unsafe_allow_html=True)
 
 # セッション状態の初期化（ボタンの状態を保持）
 if "button_clicked0" not in st.session_state:
