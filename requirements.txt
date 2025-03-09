@@ -1,14 +1,14 @@
 mercantile
-mapbox_vector_tile
+mapbox-vector-tile
 requests
-json
-vt2geojson.tools
-cv2
-glob
+jsonschema
+os-sys
+vt2geojson
+opencv-python-headless  # cv2 用
+numpy
+glob2
 pandas
-csv
 folium
-PIL
-PIL.ExifTags
+pillow  # PIL
 streamlit
-streamlit_folium
+streamlit-folium
