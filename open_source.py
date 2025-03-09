@@ -982,7 +982,7 @@ def image_maker(start_date, end_date, lat_mean, lon_mean,max_value):
                     # AreaRateが0.02以上のデータをカウント
                     filtered_count = sum(1 for item in metadata_list if item["AreaRate"] >= 0.001)
                     # 10行以上になったらストップ
-                    if filtered_count == max_value:
+                    if filtered_count > max_value:
                         filtered_metadata_list = [metadata for metadata in metadata_list if metadata["AreaRate"] >= 0.001]
                         m = making_map(start_date,end_date,filtered_metadata_list)  
                         return m
@@ -1081,7 +1081,7 @@ if st.session_state["button_clicked"]:
                 lon_mean = st.number_input("経度を入力してください", format="%.4f", step=0.0001,value=lon)
                 date = st.date_input("日付（開始日）を選択してください",format="YYYY-MM-DD", value=datetime.today())
                 date2 = st.date_input("日付（終日）を選択してください",format="YYYY-MM-DD", value=datetime.today())
-                max_value = st.number_input("出力する被災建物の個数を入力してください（※最大被災建物個数を超えるとエラーがでます。）", format="%.0f", step=float(1),min_value=float(2))
+                max_value = st.number_input("出力する被災建物の個数を入力してください（※最大被災建物個数を超えるとエラーがでます。）", format="%.0f", step=float(1),min_value=float(1))
                 
                 # 送信ボタン
                 submitted = st.form_submit_button("送信")
