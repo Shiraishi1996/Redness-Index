@@ -383,8 +383,8 @@ def convert_RI_normal(im, lat, lon, heading):
     # im_DI = 200*((im[:, :, 2] )/(im[:, :, 2] + im[:, :, 1] + im[:, :, 0]))
     # im_DI2 = 200*(im2[:, :, 2])/(im2[:, :, 2] + im2[:, :, 1] + im2[:, :, 0])
 
-    ave1 = 129.08210696919892
-    std1 = 258.3910900702745
+    ave1 = 129.08
+    std1 = 258.39
 
     vv = 0.1
     change_color = (0, 0, 255)
