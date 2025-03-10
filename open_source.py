@@ -342,6 +342,45 @@ def green_aspara(image_files):
     return metadata_list,img_base64
 
 @st.cache_resource
+def convert_RI360_short(im, lat, lon, heading):
+    # OpenCVでデコード（画像を読み込む）
+    im = cv2.imdecode(im, cv2.IMREAD_COLOR).astype(np.float32)  # float32 で扱う
+    h, w = im.shape[:2]  # 画像の高さ・幅
+
+    # 画像のRGBチャンネルを分離
+    b, g, r = cv2.split(im)
+
+    # 分母を計算（ゼロ除算を回避）
+    denominator = np.where(0.299 * r + 0.298 * g == 0, 1, 0.299 * r + 0.298 * g)
+
+    # 計算式の適用（赤色強調の値を取得）
+    im_DI = 200 * ((r - g) / denominator)
+
+    # 変換後の画像（赤色変更）
+    change_color = (0, 0, 255)
+
+    # 画像の左右範囲を定義
+    left_range = (slice(round(h / 3), round(h * 2 / 3)), slice(round(w / 2), round(3 * w / 4)))
+    right_range = (slice(round(h / 3), round(h * 2 / 3)), slice(round(3 * w / 4 + 1), w))
+
+    # 赤色を検出する範囲のマスクを作成
+    ave1, std1, vv = 129.08, 258.39, 0.1
+    mask_left = (ave1 - std1 * vv <= im_DI[left_range]) & (im_DI[left_range] <= ave1 + std1 * vv)
+    mask_right = (ave1 - std1 * vv <= im_DI[right_range]) & (im_DI[right_range] <= ave1 + std1 * vv)
+
+    # 変換結果の値を計算
+    value = round(np.count_nonzero(mask_left) / (h * w * 0.125 * 0.33), 3)
+    value2 = round(np.count_nonzero(mask_right) / (h * w * 0.125 * 0.33), 3)
+
+    # GPSオフセット計算
+    left_coord = calculate_offset_coordinates(lat, lon, heading - 45, 10)
+    right_coord = calculate_offset_coordinates(lat, lon, heading + 45, 10)
+
+    print(value, value2, left_coord, right_coord)
+
+    return value, value2, left_coord, right_coord
+
+@st.cache_resource
 def convert_RI360(im, lat, lon, heading):
     a = 0
     ar = 0
@@ -432,6 +471,45 @@ def convert_RI360(im, lat, lon, heading):
     left_coord = calculate_offset_coordinates(lat,lon,heading-45,10)
     right_coord = calculate_offset_coordinates(lat,lon,heading+45,10)
     print(value,value2,left_coord, right_coord)
+
+    return value, value2, left_coord, right_coord
+
+@st.cache_resource
+def convert_RI_normal_short(im, lat, lon, heading):
+    # OpenCVでデコード（画像を読み込む）
+    im = cv2.imdecode(im, cv2.IMREAD_COLOR).astype(np.float32)  # float32 で扱う
+    h, w = im.shape[:2]  # 画像の高さ・幅
+
+    # 画像のRGBチャンネルを分離
+    b, g, r = cv2.split(im)
+
+    # 分母を計算（ゼロ除算を回避）
+    denominator = np.where(0.299 * r + 0.298 * g == 0, 1, 0.299 * r + 0.298 * g)
+
+    # 計算式の適用（赤色強調の値を取得）
+    im_DI = 200 * ((r - g) / denominator)
+
+    # 変換後の画像（赤色変更）
+    change_color = (0, 0, 255)
+
+    # 画像の左右範囲を定義
+    left_range = (slice(round(h / 3), round(h * 2 / 3)), slice(0, round(w / 2)))
+    right_range = (slice(round(h / 3), round(h * 2 / 3)), slice(round(w / 2 + 1), w))
+
+    # 赤色を検出する範囲のマスクを作成
+    ave1, std1, vv = 129.08, 258.39, 0.1
+    mask_left = (ave1 - std1 * vv <= im_DI[left_range]) & (im_DI[left_range] <= ave1 + std1 * vv)
+    mask_right = (ave1 - std1 * vv <= im_DI[right_range]) & (im_DI[right_range] <= ave1 + std1 * vv)
+
+    # 変換結果の値を計算
+    value = round(np.count_nonzero(mask_left) / (h * w * 0.125 * 0.33), 3)
+    value2 = round(np.count_nonzero(mask_right) / (h * w * 0.125 * 0.33), 3)
+
+    # GPSオフセット計算
+    left_coord = calculate_offset_coordinates(lat, lon, heading - 45, 10)
+    right_coord = calculate_offset_coordinates(lat, lon, heading + 45, 10)
+
+    print(value, value2, left_coord, right_coord)
 
     return value, value2, left_coord, right_coord
 
@@ -710,6 +788,51 @@ def convert_RI360_normal_pic(c, lat, lon, heading):
     right_coord = calculate_offset_coordinates(lat, lon, heading+45, 10)
 
     return value,value2,left_coord,right_coord,image1,image2
+
+@st.cache_resource
+def making_map_short(a, b, metadata_list):
+    # 日付のパース（開始日と終了日）
+    start_date = datetime.strptime(a, "%Y-%m-%d")
+    end_date = datetime.strptime(b, "%Y-%m-%d")
+
+    # データを日付範囲でフィルタリング
+    data = [
+        item for item in metadata_list
+        if start_date <= datetime.strptime(item["captured_at"][:10], "%Y-%m-%d") <= end_date
+    ]
+
+    # 地図の中心を計算
+    if data:
+        avg_latitude = sum(item["currentLatitude"] for item in data) / len(data)
+        avg_longitude = sum(item["currentLongitude"] for item in data) / len(data)
+    else:
+        avg_latitude, avg_longitude = 36.0, 140.0  # デフォルト値（例: 日本の中心）
+
+    # Foliumマップの作成
+    m = folium.Map(location=[avg_latitude, avg_longitude], zoom_start=15)
+
+    # 被害エリアの円を追加
+    for item in data:
+        lat, lon, scale = item["currentLatitude"], item["currentLongitude"], item["AreaRate"]
+        popup_text = f"<a href='{item['image_url']}' target='_blank'>画像を見る</a> {scale}"
+        color = "red" if 0.08 <= scale <= 0.1 else "blue"
+
+        folium.Circle(
+            location=[lat, lon],
+            radius=scale * 35,  # AreaRateを半径として使用
+            color=color,
+            fill=True,
+            fill_color=color,
+            fill_opacity=0.3,
+            popup=folium.Popup(popup_text, max_width=300),
+        ).add_to(m)
+
+    # 地図を保存（ループの外で1回だけ実行）
+    map_path = "download.html"
+    m.save(map_path)
+    print(f"被害状況のマップを作成しました: {map_path}")
+
+    return m
 
 @st.cache_resource
 def making_map(a, b, metadata_list):
@@ -1001,6 +1124,126 @@ def image_maker(start_date, end_date, lat_mean, lon_mean,max_value):
                         m = making_map(start_date,end_date,filtered_metadata_list)  
                         return m
 
+@st.cache_resource
+def image_maker_short(start_date, end_date, lat_mean, lon_mean, max_value):
+    # 取得する範囲（経度・緯度）
+    east, south, west, north = [lon_mean + 0.002, lat_mean - 0.002, lon_mean - 0.002, lat_mean + 0.002]
+
+    # Mapillary API の設定
+    access_token = 'MLY|28337048202609587|0b9728634099ee20603722d9385b4156'
+    filter_date = datetime.strptime(start_date + " 00:00:00", '%Y-%m-%d %H:%M:%S')
+    
+    # タイル取得
+    tiles = list(mercantile.tiles(west, south, east, north, 14))
+    metadata_list = []
+    processed_images = set()  # image_id のセット（重複防止）
+
+    for tile in tiles:
+        tile_url = f'https://tiles.mapillary.com/maps/vtp/mly1_public/2/{tile.z}/{tile.x}/{tile.y}?access_token={access_token}'
+        response = requests.get(tile_url)
+
+        if response.status_code != 200:
+            print(f"❌ Tile request failed: {tile_url}")
+            continue
+
+        try:
+            data = vt_bytes_to_geojson(response.content, tile.x, tile.y, tile.z, layer="image")
+        except Exception as e:
+            print(f"⚠️ Failed to parse tile data: {e}")
+            continue
+
+        # タイル内の各フィーチャーを処理
+        for feature in data['features']:
+            lng, lat = feature['geometry']['coordinates']
+            
+            if not (west <= lng <= east and south <= lat <= north):
+                continue  # 範囲外ならスキップ
+
+            image_id = feature['properties']['id']
+            if image_id in processed_images:
+                continue  # 重複スキップ
+
+            sequence_id = feature['properties']['sequence_id']
+            compass_angle = feature['properties'].get("compass_angle", None)
+
+            # Mapillary API で画像データ取得
+            header = {'Authorization': f'OAuth {access_token}'}
+            url = f'https://graph.mapillary.com/{image_id}?fields=thumb_2048_url,computed_compass_angle,is_pano,captured_at&camera_type=vehicle'
+            r = requests.get(url, headers=header)
+
+            try:
+                image_data = r.json()
+            except Exception as e:
+                print(f"⚠️ Failed to parse image metadata: {e}")
+                continue
+
+            if not image_data.get('is_pano', False):  # 360°画像を除外
+                pano = "else"
+            else:
+                pano = "360_image"
+
+            captured_at_unix = image_data.get('captured_at')
+            if not captured_at_unix:
+                continue  # 撮影日時がない場合はスキップ
+
+            captured_at = datetime.utcfromtimestamp(captured_at_unix / 1000).strftime('%Y-%m-%d %H%M%S')
+
+            if datetime.strptime(captured_at, '%Y-%m-%d %H%M%S') < filter_date:
+                continue  # 指定日以前の画像をスキップ
+
+            image_url = image_data.get('thumb_2048_url')
+            if not image_url:
+                continue  # 画像URLなしの場合スキップ
+
+            if not os.path.exists(pano):
+                os.makedirs(pano)
+
+            # 画像データを取得して処理
+            image_content = requests.get(image_url, stream=True).content
+            image_array = np.asarray(bytearray(image_content), dtype=np.uint8)
+
+            if pano == "360_image":
+                value, value2, left_coord, right_coord = convert_RI360_short(image_array, lat, lng, compass_angle)
+            else:
+                value, value2, left_coord, right_coord = convert_RI_normal_short(image_array, lat, lng, compass_angle)
+
+            # メタデータリストを一括で追加
+            metadata_list.extend([
+                {
+                    "image_id": image_id,
+                    "sequence_id": sequence_id,
+                    "currentLongitude": left_coord[1],
+                    "currentLatitude": left_coord[0],
+                    "compass_angle": compass_angle,
+                    "captured_at": captured_at,
+                    "image_url": image_url,
+                    "AreaRate": value
+                },
+                {
+                    "image_id": image_id,
+                    "sequence_id": sequence_id,
+                    "currentLongitude": right_coord[1],
+                    "currentLatitude": right_coord[0],
+                    "compass_angle": compass_angle,
+                    "captured_at": captured_at,
+                    "image_url": image_url,
+                    "AreaRate": value2
+                }
+            ])
+
+            # 処理済み画像IDを追加
+            processed_images.add(image_id)
+
+            print(f"✅ {image_id} saved with metadata (Captured at: {captured_at})")
+
+            # 一定のデータ数に達したら処理を停止
+            filtered_metadata_list = [m for m in metadata_list if m["AreaRate"] >= 0]
+            if len(filtered_metadata_list) > max_value:
+                return making_map_short(start_date, end_date, filtered_metadata_list)
+
+    print(f"📂 データ処理完了")
+    return None
+
 #convert_RI360_3()
 #convert_RI360_2()
 #image_maker(start_date="2015-04-14",end_date="2025-02-02",lat_mean=38.6, lon_mean= 139.9)
@@ -1110,7 +1353,7 @@ if st.session_state["button_clicked"]:
                     st.write(f"期間:{str(date)}-{str(date2)}")
                     st.write(f"最大個数:{max_value}")
                     st.success("データが送信されました！")
-                    m = image_maker(start_date=str(date),end_date=str(date2),lat_mean=lat_mean, lon_mean=lon_mean,max_value=max_value)
+                    m = image_maker_short(start_date=str(date),end_date=str(date2),lat_mean=lat_mean, lon_mean=lon_mean,max_value=max_value)
                     st_folium(m, width=700, height=500)
                     # HTMLファイルとして保存
                     m.save("map.html")
