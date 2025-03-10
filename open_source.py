@@ -822,6 +822,44 @@ def making_map2(metadata_list,image_based64):
         print(f"被害状況のマップを作成しました: {map_path}")
     return m
 
+def making_map2_short(metadata_list, image_based64):
+    # 地図の中心を計算
+    if metadata_list:
+        avg_latitude = sum(item["currentLatitude"] for item in metadata_list) / len(metadata_list)
+        avg_longitude = sum(item["currentLongitude"] for item in metadata_list) / len(metadata_list)
+    else:
+        avg_latitude, avg_longitude = 36.0, 140.0  # デフォルトの座標を設定（例: 日本の中央付近）
+
+    # Foliumマップの作成
+    m = folium.Map(location=[avg_latitude, avg_longitude], zoom_start=15)
+
+    # ポップアップのHTMLテンプレート
+    popup_template = "<img src='data:image/png;base64,{}' style='max-width: 100%;'> {}"
+
+    # 地図にマーカーを追加
+    for item in metadata_list:
+        lat, lon, scale = item["currentLatitude"], item["currentLongitude"], item["AreaRate"]
+        popup_text = popup_template.format(image_based64, scale)
+        color = "red" if 0.08 <= scale <= 0.1 else "blue"
+
+        # FoliumのCircleマーカーを追加
+        folium.Circle(
+            location=[lat, lon],
+            radius=scale * 35,  # AreaRateを半径として使用
+            color=color,
+            fill=True,
+            fill_color=color,
+            fill_opacity=0.3,
+            popup=folium.Popup(popup_text, max_width=300),
+        ).add_to(m)
+
+    # 地図を保存
+    map_path = "download.html"
+    m.save(map_path)
+    print(f"被害状況のマップを作成しました: {map_path}")
+
+    return m
+
 
 def latlon_to_tile_xy(lat, lon, zoom):
     """緯度経度をXYZタイル座標に変換"""
@@ -1014,7 +1052,7 @@ if st.session_state["button_clicked0"]:
 
             if submitted:
                 metadata_list,image_based64 = green_aspara_short(zz)
-                m = making_map2(metadata_list=metadata_list,image_based64=image_based64)
+                m = making_map2_short(metadata_list=metadata_list,image_based64=image_based64)
                 # Streamlit に表示
                 st_folium(m, width=700, height=500)
                 m.save("map.html")
