@@ -1110,10 +1110,18 @@ if st.session_state["button_clicked"]:
                     st.write(f"最大個数:{max_value}")
                     st.success("データが送信されました！")
                     m = image_maker(start_date=str(date),end_date=str(date2),lat_mean=lat_mean, lon_mean=lon_mean,max_value=max_value)
+                    # HTMLデータを取得
+                    html_data = io.StringIO()
+                    m.save(html_data, close_file=False)  # HTMLを文字列として保存
+                    html_str = html_data.getvalue()
+                    
+                    # Streamlit アプリ
+                    st.title("Folium Map Download Example")
                     st_folium(m, width=700, height=500)
+                    # ダウンロードボタン
                     st.download_button(
                         label="マップをダウンロード (HTML)",
-                        data=m,
+                        data=html_str,
                         file_name="map.html",
                         mime="text/html"
                     )
