@@ -862,7 +862,7 @@ def image_maker(start_date, end_date, lat_mean, lon_mean,max_value):
     #east, south, west, north = [130.9, 32.7, 130.8, 32.8]
     # 取得する範囲（経度・緯度）花蓮（台湾）
 
-    east, south, west, north = [lon_mean + 0.02, lat_mean - 0.02, lon_mean - 0.02, lat_mean + 0.02]
+    east, south, west, north = [lon_mean + 0.002, lat_mean - 0.002, lon_mean - 0.002, lat_mean + 0.002]
 
 
     tile_coverage = 'mly1_public'
