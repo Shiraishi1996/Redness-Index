@@ -230,7 +230,7 @@ def green_aspara_short(image_files):
             }
         ])
 
-    return metadata_list
+    return metadata_list, img_base64
 
 @st.cache_resource
 def green_aspara(image_files):
