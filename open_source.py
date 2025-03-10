@@ -202,11 +202,14 @@ def green_aspara(image_files):
         color_gray_right = []
         color_gray_left = []
 
+        denominator = 0.299 * r + 0.298 * g
+        denominator = np.where(denominator == 0, 1, denominator)  # 0 を 1 に置き換え
+
         for i in range(h//2, h):
             for j in range(w//2):
                 b, g, r = im[i, j]
-                if ave1 - std1 * vv <= 200*((r - g)/(0.299 * r  + 0.298 * g)) <= ave1 + std1 * vv:
-                    color_list_left.append(200*((r - g)/(0.299 * r + 0.298 * g)))
+                if ave1 - std1 * vv <= 200*((r - g)/denominator) <= ave1 + std1 * vv:
+                    color_list_left.append(200*((r - g)/denominator))
                     color_gray_left.append((0.299 * r + 0.298 * b))
                     im[i, j] = change_color
                     a += 1
@@ -216,8 +219,8 @@ def green_aspara(image_files):
         for i in range(h//2+1,h):
             for j in range(w//2+1,w):
                 b, g, r = im[i, j]
-                if ave1 - std1 * vv <= 200*((r - g)/(0.299 * r + 0.298 * g)) <= ave1 + std1 * vv :
-                    color_list_right.append(200*((r - g)/(0.299 * r + 0.298 * g)))
+                if ave1 - std1 * vv <= 200*((r - g)/denominator) <= ave1 + std1 * vv :
+                    color_list_right.append(200*((r - g)/denominator))
                     color_gray_left.append((0.299 * r + 0.298 * b))
                     im[i, j] = change_color
                     ar += 1
