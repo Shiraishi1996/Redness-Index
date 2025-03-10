@@ -227,6 +227,11 @@ def green_aspara(image_files):
         value = round(a/(h*w*0.25),3)
         value2 = round(ar/(h*w*0.25),3)
 
+        # 画像をBase64に変換
+        buffered = io.BytesIO()
+        im.save(buffered, format="PNG")  # PNG形式で保存
+        img_base64 = base64.b64encode(buffered.getvalue()).decode()
+        
         print(sum(color_list_left, color_list_right))
 
         #value = round(sum(color_list)/len(color_list)+1,3)
@@ -262,7 +267,7 @@ def green_aspara(image_files):
 
         # (225, 400)
     
-    return metadata_list
+    return metadata_list,img_base64
 
 @st.cache_resource
 def convert_RI360(im, lat, lon, heading):
@@ -678,7 +683,7 @@ def making_map(a, b, metadata_list):
     return m
 
 @st.cache_resource
-def making_map2(metadata_list):
+def making_map2(metadata_list,image_based64):
     # JSONファイルの読み込み
     
     data = metadata_list
@@ -697,10 +702,10 @@ def making_map2(metadata_list):
     for item in data:
         lat = item["currentLatitude"]
         lon = item["currentLongitude"]
-        popup_text = f"<a href='{item['image_url']}' target='_blank'>画像を見る</a> {item['AreaRate']}"
+        popup_text = f"<img src="data:image/png;base64,{image_based64}" style="max-width: 100%;"> {item['AreaRate']}"
         scale = item["AreaRate"]
 
-        if scale < 0.08: 
+        if scale < 0.08 or scale>0.1: 
             # 被害エリアを円で表示
             folium.Circle(
                     location=[lat, lon],
@@ -920,8 +925,8 @@ if st.session_state["button_clicked0"]:
             submitted = st.form_submit_button("送信")
 
             if submitted:
-                metadata_list = green_aspara(zz)
-                m = making_map2(metadata_list=metadata_list)
+                metadata_list,image_based64 = green_aspara(zz)
+                m = making_map2(metadata_list=metadata_list,image_based64=image_based64)
                 # Streamlit に表示
                 st_folium(m, width=700, height=500)
                 m.save("map.html")
