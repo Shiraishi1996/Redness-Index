@@ -63,7 +63,6 @@ def get_lat_lon(exif_data):
 
     return lat, lon
 
-@st.cache_resource
 def convert_to_degrees(value):
     d = float(value[0])
     m = float(value[1])
