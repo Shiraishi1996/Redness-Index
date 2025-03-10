@@ -702,7 +702,7 @@ def making_map2(metadata_list,image_based64):
     for item in data:
         lat = item["currentLatitude"]
         lon = item["currentLongitude"]
-        popup_text = f"<img src="data:image/png;base64,{image_based64}" style="max-width: 100%;"> {item['AreaRate']}"
+        popup_text = f"<img src='data:image/png;base64,{image_based64}' style='max-width: 100%;'> {item['AreaRate']}"
         scale = item["AreaRate"]
 
         if scale < 0.08 or scale>0.1: 
