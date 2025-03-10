@@ -296,6 +296,8 @@ def convert_RI360(im, lat, lon, heading):
     for i in range(round(h/3), round(h*2/3)):
             for j in range(round(w/2), round(3*w/4)):
                 b, g, r = im[i, j]
+                r = np.array(r, dtype=np.float32)
+                g = np.array(g, dtype=np.float32)
                 denominator = 0.299 * r + 0.298 * g
                 denominator = np.where(denominator == 0, 1, denominator)  # 0 を 1 に置き換え
                 if ave1 - std1 * vv <= 200*((r - g)/denominator) <= ave1 + std1 * vv:
@@ -308,6 +310,8 @@ def convert_RI360(im, lat, lon, heading):
     for i in range(round(h/3), round(h*2/3)):
             for j in range(round(3*w/4+1),w):
                 b, g, r = im[i, j]
+                r = np.array(r, dtype=np.float32)
+                g = np.array(g, dtype=np.float32)
                 denominator = 0.299 * r + 0.298 * g
                 denominator = np.where(denominator == 0, 1, denominator)  # 0 を 1 に置き換え
                 if ave1 - std1 * vv <= 200*((r - g)/denominator) <= ave1 + std1 * vv :
