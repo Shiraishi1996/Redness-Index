@@ -42,6 +42,7 @@ def get_exif_data(image_path):
             exif[decoded] = value
     return exif
 
+@st.cache_resource
 def get_lat_lon(exif_data):
     if "GPSInfo" not in exif_data:
         return None, None
@@ -62,12 +63,14 @@ def get_lat_lon(exif_data):
 
     return lat, lon
 
+@st.cache_resource
 def convert_to_degrees(value):
     d = float(value[0])
     m = float(value[1])
     s = float(value[2])
     return d + (m / 60.0) + (s / 3600.0)
 
+@st.cache_resource
 def save_frames(video_path, output_dir, step=30, ext='jpg'):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -84,6 +87,7 @@ def save_frames(video_path, output_dir, step=30, ext='jpg'):
             cv2.imwrite(frame_filename, frame)
     cap.release()
 
+@st.cache_resource
 def calculate_offset_coordinates(lat, lon, angle, distance):
     """
     指定した緯度経度 (lat, lon) から、方位角 (angle) と距離 (distance) に基づいて新しい座標を計算する。
@@ -124,6 +128,7 @@ def calculate_offset_coordinates(lat, lon, angle, distance):
 
     return new_lat, new_lon
 
+@st.cache_resource
 def calculate_bearing(lat1, lon1, lat2, lon2):
     """
     2点の緯度経度から方位角（北を0°とし、時計回りの角度）を計算する
@@ -144,7 +149,7 @@ def calculate_bearing(lat1, lon1, lat2, lon2):
     bearing = (math.degrees(initial_bearing) + 360) % 360
     return bearing
 
-
+@st.cache_resource
 def green_aspara(zip_path):
 
     extract_folder = "extracted_images"
@@ -384,7 +389,7 @@ def green_aspara(zip_path):
     
     return zip_bytes, metadata_list
 
-
+@st.cache_resource
 def convert_RI360(im, lat, lon, heading):
     a = 0
     ar = 0
@@ -471,6 +476,7 @@ def convert_RI360(im, lat, lon, heading):
 
     return value, value2, left_coord, right_coord
 
+@st.cache_resource
 def convert_RI_normal(im, lat, lon, heading):
     a = 0
     ar = 0
@@ -655,6 +661,7 @@ def convert_RI360_3(c, lat, lon, heading):
 
     return value,value2,left_coord,right_coord,image1,image2
 
+@st.cache_resource
 def convert_RI360_normal_pic(c, lat, lon, heading):
     time = datetime.today().strftime('%Y-%m-%d %H%M%S')
     im = cv2.imread(c)
@@ -738,6 +745,7 @@ def convert_RI360_normal_pic(c, lat, lon, heading):
 
     return value,value2,left_coord,right_coord,image1,image2
 
+@st.cache_resource
 def making_map(a, b, metadata_list):
     start_date = datetime.strptime(a, "%Y-%m-%d")
     end_date = datetime.strptime(b, "%Y-%m-%d")
@@ -794,6 +802,7 @@ def making_map(a, b, metadata_list):
         print(f"被害状況のマップを作成しました: {map_path}")
     return m
 
+@st.cache_resource
 def making_map2(metadata_list):
     # JSONファイルの読み込み
     
@@ -853,7 +862,7 @@ def latlon_to_tile_xy(lat, lon, zoom):
     y = int((1.0 - math.asinh(math.tan(math.radians(lat))) / math.pi) / 2.0 * n)
     return x, y
 
-
+@st.cache_resource
 def image_maker(start_date, end_date, lat_mean, lon_mean,max_value):
     # Mapillary ベクタタイルのエンドポイント
 
