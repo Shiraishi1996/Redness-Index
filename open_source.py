@@ -196,22 +196,13 @@ def green_aspara(image_files):
         ar = 0
         bcount = 0
 
-        # 色の変更
-        color_list_right = []
-        color_list_left = []
-        color_gray_right = []
-        color_gray_left = []
-
         for i in range(h//2, h):
             for j in range(w//2):
                 b, g, r = im[i, j]
-                denominator = 0.299 * r + 0.298 * g
+                denominator = 0.3*(r + g)
                 denominator = np.where(denominator == 0, 1, denominator)  # 0 を 1 に置き換え
 
                 if ave1 - std1 * vv <= 200*((r - g)/denominator) <= ave1 + std1 * vv:
-                    color_list_left.append(200*((r - g)/denominator))
-                    color_gray_left.append((0.299 * r + 0.298 * b))
-                    im[i, j] = change_color
                     a += 1
                 else:
                     im[i, j] = (b, g, r)
@@ -222,14 +213,8 @@ def green_aspara(image_files):
                 denominator = 0.299 * r + 0.298 * g
                 denominator = np.where(denominator == 0, 1, denominator)  # 0 を 1 に置き換え
                 if ave1 - std1 * vv <= 200*((r - g)/denominator) <= ave1 + std1 * vv :
-                    color_list_right.append(200*((r - g)/denominator))
-                    color_gray_left.append((0.299 * r + 0.298 * b))
-                    im[i, j] = change_color
                     ar += 1
-                else:
-                    im[i, j] = (b, g, r)
 
-        
         value = round(a/(h*w*0.25),3)
         value2 = round(ar/(h*w*0.25),3)
 
@@ -239,13 +224,7 @@ def green_aspara(image_files):
         im = Image.fromarray(im)
         im.save(buffered, format="PNG")  # PNG形式で保存
         img_base64 = base64.b64encode(buffered.getvalue()).decode()
-        
-        print(sum(color_list_left, color_list_right))
 
-        #value = round(sum(color_list)/len(color_list)+1,3)
-        #value2 = round(np.std(color_list_left),3)
-        #value3 = round(np.mean(color_list))
-        #value4 = sum(color_list2)
 
         new_lat, new_lon = calculate_offset_coordinates(lat,lon,bearing-45,10)
         new_lat2, new_lon2 = calculate_offset_coordinates(lat,lon,bearing+45,10)
