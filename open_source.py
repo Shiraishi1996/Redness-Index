@@ -1114,8 +1114,8 @@ if st.session_state["button_clicked"]:
 
                     html_data = io.BytesIO()
                     m.save(html_data)  # HTML を保存
-                    html_str = html_data.getvalue().decode("utf-8")  # バイトデータを文字列に変換
-                    
+                    html_str = html_data.getvalue()  # そのまま文字列として取得
+
                     # Streamlit アプリ
                     st.title("Folium Map Download Example")
                     st_folium(m, width=700, height=500)
