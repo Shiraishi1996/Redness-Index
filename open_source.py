@@ -43,7 +43,6 @@ def get_exif_data(image_path):
             exif[decoded] = value
     return exif
 
-@st.cache_resource
 def get_lat_lon(exif_data):
     if "GPSInfo" not in exif_data:
         return None, None
