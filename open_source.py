@@ -1113,6 +1113,6 @@ if st.session_state["button_clicked"]:
                     m = image_maker(start_date=str(date),end_date=str(date2),lat_mean=lat_mean, lon_mean=lon_mean,max_value=max_value)
                     st_folium(m, width=700, height=500)
                     # ダウンロードボタン
-                    with open("map.html", "rb") as f:
-                        st.download_button(label="Download Map", data=f, file_name="map.html", mime="text/html")
+        with open("map.html", "rb") as f:
+            st.download_button(label="Download Map", data=f, file_name="map.html", mime="text/html")
                     
