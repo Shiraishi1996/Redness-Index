@@ -196,8 +196,6 @@ def green_aspara_short(image_files):
         value1 = round(np.count_nonzero(mask1) / (h * w * 0.25), 3)
         value2 = round(np.count_nonzero(mask2) / (h * w * 0.25), 3)
 
-        # 画像の処理（変換・Base64）
-        im[~mask] = (0, 0, 255)  # 条件外のピクセルを赤色に変更
         im_pil = Image.fromarray(im.astype(np.uint8))
 
         buffered = io.BytesIO()
