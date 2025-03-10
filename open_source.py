@@ -1050,13 +1050,10 @@ if st.session_state["button_clicked0"]:
                 m = making_map2(metadata_list=metadata_list)
                 # Streamlit に表示
                 st_folium(m, width=700, height=500)
-                st.download_button(
-                        label="マップをダウンロード (HTML)",
-                        data=m,
-                        file_name="map.html",
-                        mime="text/html"
-                    )
-
+                m.save("map.html")
+                    # ダウンロードボタン
+    with open("map.html", "rb") as f:
+        st.download_button(label="Download Map", data=f, file_name="map.html", mime="text/html")
 
 #st.download_button(
                 #    label="処理済みZIPをダウンロード",
