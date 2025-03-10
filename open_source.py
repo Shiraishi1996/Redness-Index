@@ -1049,6 +1049,12 @@ if st.session_state["button_clicked0"]:
                 m = making_map2(metadata_list=metadata_list)
                 # Streamlit に表示
                 st_folium(m, width=700, height=500)
+                st.download_button(
+                        label="マップをダウンロード (HTML)",
+                        data=m,
+                        file_name="map.html",
+                        mime="text/html"
+                    )
 
 
 #st.download_button(
@@ -1105,4 +1111,9 @@ if st.session_state["button_clicked"]:
                     st.success("データが送信されました！")
                     m = image_maker(start_date=str(date),end_date=str(date2),lat_mean=lat_mean, lon_mean=lon_mean,max_value=max_value)
                     st_folium(m, width=700, height=500)
-                    st.download_button("Downloads",file_name="download.html",data=m)
+                    st.download_button(
+                        label="マップをダウンロード (HTML)",
+                        data=m,
+                        file_name="map.html",
+                        mime="text/html"
+                    )
