@@ -1111,19 +1111,10 @@ if st.session_state["button_clicked"]:
                     st.write(f"最大個数:{max_value}")
                     st.success("データが送信されました！")
                     m = image_maker(start_date=str(date),end_date=str(date2),lat_mean=lat_mean, lon_mean=lon_mean,max_value=max_value)
-
-                    html_data = io.BytesIO()
-                    m.save(html_data)  # Folium の `save()` は bytes を扱う
-                    html_str = html_data.getvalue().decode("utf-8")  # `bytes` を `str` に変換
-                    html_data.close()  # データ取得後に閉じる
-                                        
-                    # Streamlit アプリ
-                    st.title("Folium Map Download Example")
                     st_folium(m, width=700, height=500)
                     # ダウンロードボタン
-                    st.download_button(
-                        label="マップをダウンロード (HTML)",
-                        data=html_str,
-                        file_name="map.html",
-                        mime="text/html"
-                    )
+                    m.save("map.html")
+                    
+                    # Streamlitでダウンロードボタンを作成
+                    with open("map.html", "rb") as f:
+                        st.download_button(label="Download Map", data=f, file_name="map.html", mime="text/html")
