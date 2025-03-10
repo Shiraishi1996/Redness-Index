@@ -1020,7 +1020,7 @@ if st.session_state["button_clicked0"]:
                 m.save("map.html")
                     # ダウンロードボタン
     with open("map.html", "rb") as f:
-        st.download_button(label="Download Map", data=f, file_name="map.html", mime="text/html")
+        st.download_button(label="Download Map", data=f, file_name="map.html", mime="text/html", key="download_2")
 
 #st.download_button(
                 #    label="処理済みZIPをダウンロード",
@@ -1080,5 +1080,5 @@ if st.session_state["button_clicked"]:
                     m.save("map.html")
                     # ダウンロードボタン
         with open("map.html", "rb") as f:
-            st.download_button(label="Download Map", data=f, file_name="map.html", mime="text/html")
+            st.download_button(label="Download Map", data=f, file_name="map.html", mime="text/html", key="download_2")
                     
