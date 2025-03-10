@@ -229,6 +229,8 @@ def green_aspara(image_files):
 
         # 画像をBase64に変換
         buffered = io.BytesIO()
+        # numpy.ndarray → PIL Image に変換
+        im = Image.fromarray(im)
         im.save(buffered, format="PNG")  # PNG形式で保存
         img_base64 = base64.b64encode(buffered.getvalue()).decode()
         
