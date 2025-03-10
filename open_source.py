@@ -772,7 +772,7 @@ def making_map(a, b, metadata_list):
         popup_text = f"<a href='{item['image_url']}' target='_blank'>画像を見る</a> {item['AreaRate']}"
         scale = item["AreaRate"]
 
-        if scale < 0.08: 
+        if scale < 0.08 or scale>0.1: 
             # 被害エリアを円で表示
             folium.Circle(
                     location=[lat, lon],
