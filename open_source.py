@@ -967,7 +967,7 @@ if st.session_state["button_clicked"]:
         with st.form("my_form2"):
                 lat_mean = st.number_input("緯度を入力してください", format="%.4f", step=0.0001,value=lat)
                 lon_mean = st.number_input("経度を入力してください", format="%.4f", step=0.0001,value=lon)
-                date = st.date_input("日付（開始日）を選択してください",format="YYYY-MM-DD", value=datetime.today())
+                date = st.date_input("日付（開始日）を選択してください",format="YYYY-MM-DD", value=today.replace(year=datetime.today.year - 5))
                 date2 = st.date_input("日付（終日）を選択してください",format="YYYY-MM-DD", value=datetime.today())
                 max_value = st.number_input("出力する被災建物の個数を入力してください（※最大被災建物個数を超えるとエラーがでます。）", format="%.0f", step=float(1),min_value=float(1))
                 
