@@ -911,7 +911,7 @@ def making_map_short(a, b, metadata_list):
 
         folium.Circle(
             location=[lat, lon],
-            radius=scale,  # AreaRateを半径として使用
+            radius=1 - scale,  # AreaRateを半径として使用
             color=color,
             fill=True,
             fill_color=color,
@@ -1021,7 +1021,7 @@ def making_map2(metadata_list,image_based64):
             # 被害エリアを円で表示
             folium.Circle(
                     location=[lat, lon],
-                    radius=scale,  # AreaRateを半径として使用
+                    radius=1 - scale,  # AreaRateを半径として使用
                     color="red",
                     fill=True,
                     fill_color="red",
@@ -1058,7 +1058,7 @@ def making_map2_short(metadata_list, image_based64):
         # FoliumのCircleマーカーを追加
         folium.Circle(
             location=[lat, lon],
-            radius=scale * 35,  # AreaRateを半径として使用
+            radius=1 - scale,  # AreaRateを半径として使用
             color=color,
             fill=True,
             fill_color=color,
