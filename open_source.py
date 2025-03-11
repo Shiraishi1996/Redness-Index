@@ -381,6 +381,53 @@ def convert_RI360_short(im, lat, lon, heading):
     return value, value2, left_coord, right_coord
 
 @st.cache_resource
+def convert_RI360_short2(im, lat, lon, heading):
+    # OpenCVでデコード（画像を読み込む）
+    im = cv2.imdecode(im, cv2.IMREAD_COLOR).astype(np.float32)  # float32 で扱う
+    h, w = im.shape[:2]  # 画像の高さ・幅
+
+    # 画像のRGBチャンネルを分離
+    b, g, r = cv2.split(im)
+
+    # 分母を計算（ゼロ除算を回避）
+    denominator = np.where(0.299 * r + 0.298 * g == 0, 1, 0.299 * r + 0.298 * g)
+
+    # 計算式の適用（赤色強調の値を取得）
+    im_DI = 200 * ((r - g) / denominator)
+
+    # 変換後の画像（赤色変更）
+    change_color = (0, 0, 255)
+
+    # 画像の左右範囲を定義
+    left_range = (slice(round(h / 3), round(h * 2 / 3)), slice(round(w / 2), round(3 * w / 4)))
+    right_range = (slice(round(h / 3), round(h * 2 / 3)), slice(round(3 * w / 4 + 1), w))
+
+    # 赤色を検出する範囲のマスクを作成
+    
+    ave1 = np.mean(im_DI[left_range])
+    std1 = np.std(im_DI[left_range])
+    ave2 = np.mean(im_DI[right_range])
+    std2 = np.std(im_DI[right_range])
+    
+    mask_left = (ave1 - std1 * 2 <= im_DI[left_range])
+    mask_right = (ave2 - std2 * 2 <= im_DI[right_range])
+    
+    mask_left = (ave1 - std1 * vv <= im_DI[left_range]) & (im_DI[left_range] <= ave1 + std1 * vv)
+    mask_right = (ave2 - std2 * vv <= im_DI[right_range]) & (im_DI[right_range] <= ave2 + std2 * vv)
+
+    # 変換結果の値を計算
+    value = round(np.count_nonzero(mask_left) / (h * w * 0.125 * 0.33), 3)
+    value2 = round(np.count_nonzero(mask_right) / (h * w * 0.125 * 0.33), 3)
+
+    # GPSオフセット計算
+    left_coord = calculate_offset_coordinates(lat, lon, heading - 45, 10)
+    right_coord = calculate_offset_coordinates(lat, lon, heading + 45, 10)
+
+    print(value, value2, left_coord, right_coord)
+
+    return value, value2, left_coord, right_coord
+
+@st.cache_resource
 def convert_RI360(im, lat, lon, heading):
     a = 0
     ar = 0
@@ -497,7 +544,7 @@ def convert_RI_normal_short(im, lat, lon, heading):
     right_range = (slice(round(h / 3), round(h * 2 / 3)), slice(round(w / 2 + 1), w))
 
     # 赤色を検出する範囲のマスクを作成
-    ave1, std1, vv = 129.08, 258.39, 0.1
+    ave1, std1, vv = 129.08, 258.39, 2
     mask_left = (ave1 - std1 * vv <= im_DI[left_range]) & (im_DI[left_range] <= ave1 + std1 * vv)
     mask_right = (ave1 - std1 * vv <= im_DI[right_range]) & (im_DI[right_range] <= ave1 + std1 * vv)
 
@@ -512,6 +559,52 @@ def convert_RI_normal_short(im, lat, lon, heading):
     print(value, value2, left_coord, right_coord)
 
     return value, value2, left_coord, right_coord
+
+@st.cache_resource
+def convert_RI_normal_short2(im, lat, lon, heading):
+    # OpenCVでデコード（画像を読み込む）
+    im = cv2.imdecode(im, cv2.IMREAD_COLOR).astype(np.float32)  # float32 で扱う
+    h, w = im.shape[:2]  # 画像の高さ・幅
+
+    # 画像のRGBチャンネルを分離
+    b, g, r = cv2.split(im)
+
+    # 分母を計算（ゼロ除算を回避）
+    denominator = np.where(r + g == 0, 1, r + g)
+
+    # 計算式の適用（赤色強調の値を取得）
+    im_DI = 200 * ((r - g) / denominator)
+
+    # 変換後の画像（赤色変更）
+    change_color = (0, 0, 255)
+
+    # 画像の左右範囲を定義
+    left_range = (slice(round(h / 3), round(h * 2 / 3)), slice(0, round(w / 2)))
+    right_range = (slice(round(h / 3), round(h * 2 / 3)), slice(round(w / 2 + 1), w))
+
+    # 赤色を検出する範囲のマスクを作成
+    # 各チャンネルの平均値
+    
+    ave1 = np.mean(im_DI[left_range])
+    std1 = np.std(im_DI[left_range])
+    ave2 = np.mean(im_DI[right_range])
+    std2 = np.std(im_DI[right_range])
+    
+    mask_left = (ave1 - std1 * 2 <= im_DI[left_range])
+    mask_right = (ave2 - std2 * 2 <= im_DI[right_range])
+
+    # 変換結果の値を計算
+    value = round(np.count_nonzero(mask_left) / (h * w * 0.125 * 0.33), 3)
+    value2 = round(np.count_nonzero(mask_right) / (h * w * 0.125 * 0.33), 3)
+
+    # GPSオフセット計算
+    left_coord = calculate_offset_coordinates(lat, lon, heading - 45, 10)
+    right_coord = calculate_offset_coordinates(lat, lon, heading + 45, 10)
+
+    print(value, value2, left_coord, right_coord)
+
+    return value, value2, left_coord, right_coord
+
 
 @st.cache_resource
 def convert_RI_normal(im, lat, lon, heading):
@@ -622,6 +715,7 @@ def AI_detection(image):
     damage_ratio = (edge_pixels / total_pixels) * 100
     return damage_ratio
 
+@st.cache_resource
 def convert_RI360_3(c, lat, lon, heading):
     time = datetime.today().strftime('%Y-%m-%d %H%M%S')
     im = cv2.imread(c)
@@ -703,7 +797,7 @@ def convert_RI360_3(c, lat, lon, heading):
     left_coord = calculate_offset_coordinates(lat, lon, heading-45, 10)
     right_coord = calculate_offset_coordinates(lat, lon, heading+45, 10)
 
-    return value,value2,left_coord,right_coord,image1,image2
+    return value,value2,left_coord,right_coord
 
 @st.cache_resource
 def convert_RI360_normal_pic(c, lat, lon, heading):
@@ -1203,9 +1297,9 @@ def image_maker_short(start_date, end_date, lat_mean, lon_mean, max_value):
             image_array = np.asarray(bytearray(image_content), dtype=np.uint8)
 
             if pano == "360_image":
-                value, value2, left_coord, right_coord = convert_RI360_short(image_array, lat, lng, compass_angle)
+                value, value2, left_coord, right_coord = convert_RI360_short2(image_array, lat, lng, compass_angle)
             else:
-                value, value2, left_coord, right_coord = convert_RI_normal_short(image_array, lat, lng, compass_angle)
+                value, value2, left_coord, right_coord = convert_RI_normal_short2(image_array, lat, lng, compass_angle)
 
             # メタデータリストを一括で追加
             metadata_list.extend([
