@@ -192,14 +192,14 @@ def green_aspara_short(image_files):
     
         # 赤色を検出する範囲のマスクを作成
         
-        ave1 = np.mean(im_DI[left_range])
-        std1 = np.std(im_DI[left_range])
-        ave2 = np.mean(im_DI[right_range])
-        std2 = np.std(im_DI[right_range])
+        ave1 = np.mean(im[left_range])
+        std1 = np.std(im[left_range])
+        ave2 = np.mean(im[right_range])
+        std2 = np.std(im[right_range])
         vv = 2
         
-        mask1 = (ave1 + std1 * 2 <= im_DI[left_range])
-        mask2 = (ave2 + std2 * 2 <= im_DI[right_range])
+        mask1 = (ave1 + std1 * 2 <= im[left_range])
+        mask2 = (ave2 + std2 * 2 <= im[right_range])
 
         value1 = round(np.count_nonzero(mask1) / (h * w * 0.25), 3)
         value2 = round(np.count_nonzero(mask2) / (h * w * 0.25), 3)
