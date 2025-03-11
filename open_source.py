@@ -914,7 +914,7 @@ def making_map_short(a, b, metadata_list):
 
         folium.Circle(
             location=[lat, lon],
-            radius=scale*0.01,  # AreaRateを半径として使用
+            radius=scale*0.1,  # AreaRateを半径として使用
             color=color,
             fill=True,
             fill_color=color,
