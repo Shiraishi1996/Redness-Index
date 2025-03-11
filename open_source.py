@@ -410,11 +410,8 @@ def convert_RI360_short2(im, lat, lon, heading):
     std2 = np.std(im_DI[right_range])
     vv = 2
     
-    mask_left = (ave1 - std1 * 2 <= im_DI[left_range])
-    mask_right = (ave2 - std2 * 2 <= im_DI[right_range])
-    
-    mask_left = (ave1 - std1 * vv <= im_DI[left_range]) & (im_DI[left_range] <= ave1 + std1 * vv)
-    mask_right = (ave2 - std2 * vv <= im_DI[right_range]) & (im_DI[right_range] <= ave2 + std2 * vv)
+    mask_left = (ave1 + std1 * 2 <= im_DI[left_range])
+    mask_right = (ave2 + std2 * 2 <= im_DI[right_range])
 
     # 変換結果の値を計算
     value = round(np.count_nonzero(mask_left) / (h * w * 0.125 * 0.33), 3)
@@ -591,12 +588,12 @@ def convert_RI_normal_short2(im, lat, lon, heading):
     ave2 = np.mean(im_DI[right_range])
     std2 = np.std(im_DI[right_range])
     
-    mask_left = (ave1 - std1 * 2 <= im_DI[left_range])
-    mask_right = (ave2 - std2 * 2 <= im_DI[right_range])
+    mask_left = (ave1 + std1 * 2 <= im_DI[left_range])
+    mask_right = (ave2 + std2 * 2 <= im_DI[right_range])
 
     # 変換結果の値を計算
-    value = round(np.count_nonzero(mask_left) / (h * w * 0.125 * 0.33), 3)
-    value2 = round(np.count_nonzero(mask_right) / (h * w * 0.125 * 0.33), 3)
+    value = round(np.count_nonzero(mask_left) / (h * w * 0.25 * 0.33), 3)
+    value2 = round(np.count_nonzero(mask_right) / (h * w * 0.25 * 0.33), 3)
 
     # GPSオフセット計算
     left_coord = calculate_offset_coordinates(lat, lon, heading - 45, 10)
