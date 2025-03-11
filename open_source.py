@@ -1055,7 +1055,7 @@ def making_map2_short(metadata_list, image_based64):
     m = folium.Map(location=[avg_latitude, avg_longitude], zoom_start=15)
 
     # ポップアップのHTMLテンプレート
-    popup_template = "<img src='data:image/png;base64,{}'> {}"
+    popup_content = f"<img src='data:image/png;base64,{image_based64}' alt='画像を見る'>"
 
     # 地図にマーカーを追加
     for item in metadata_list:
