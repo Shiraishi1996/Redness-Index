@@ -408,6 +408,7 @@ def convert_RI360_short2(im, lat, lon, heading):
     std1 = np.std(im_DI[left_range])
     ave2 = np.mean(im_DI[right_range])
     std2 = np.std(im_DI[right_range])
+    vv = 2
     
     mask_left = (ave1 - std1 * 2 <= im_DI[left_range])
     mask_right = (ave2 - std2 * 2 <= im_DI[right_range])
