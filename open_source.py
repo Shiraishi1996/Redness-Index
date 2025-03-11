@@ -907,7 +907,7 @@ def making_map_short(a, b, metadata_list):
     for item in data:
         lat, lon, scale = item["currentLatitude"], item["currentLongitude"], item["AreaRate"]
         popup_text = f"<a href='{item['image_url']}' target='_blank'>画像を見る</a> {scale}"
-        color = "red" if 0.08 <= scale <= 0.1 else "blue"
+        color = "red" if 0.98 <= 1 - scale else "blue"
 
         folium.Circle(
             location=[lat, lon],
