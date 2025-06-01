@@ -38,6 +38,94 @@ resize_ratio = st.slider("リサイズ倍率（画像用）", 0.1, 1.0, 1.0)
 index_type = st.selectbox("インデックス", ["RI", "VARI", "VWRI"])
 cluster_id = st.number_input("対象クラスタ番号", 0, k-1, 0)
 
+# GPS取得関数（Exif）
+def exif_gps(image_path):
+    try:
+        with open(image_path, 'rb') as f:
+            tags = exifread.process_file(f)
+        gps_latitude = tags.get('GPS GPSLatitude')
+        gps_latitude_ref = tags.get('GPS GPSLatitudeRef')
+        gps_longitude = tags.get('GPS GPSLongitude')
+        gps_longitude_ref = tags.get('GPS GPSLongitudeRef')
+        if gps_latitude and gps_latitude_ref and gps_longitude and gps_longitude_ref:
+            lat_values = [float(x.num) / float(x.den) for x in gps_latitude.values]
+            lon_values = [float(x.num) / float(x.den) for x in gps_longitude.values]
+            lat = lat_values[0] + lat_values[1]/60 + lat_values[2]/3600
+            lon = lon_values[0] + lon_values[1]/60 + lon_values[2]/3600
+            if gps_latitude_ref.values[0] != 'N':
+                lat = -lat
+            if gps_longitude_ref.values[0] != 'E':
+                lon = -lon
+            return (lat, lon)
+    except:
+        pass
+    return None
+
+# IPからのGPS取得
+def ip_gps():
+    try:
+        g = geocoder.ip('me')
+        if g.ok:
+            return (g.latlng[0], g.latlng[1])
+    except:
+        pass
+    return None
+
+# ベストなGPS取得
+def get_best_gps(exif_path=None):
+    if exif_path:
+        gps = exif_gps(exif_path)
+        if gps: return gps, "EXIF"
+    gps = ip_gps()
+    if gps: return gps, "IP"
+    return None, "Failed"
+
+st.title("📷 画像/動画アップロード + GPS検出")
+
+mode = st.radio("モード選択", ["アップロード", "カメラ"])
+
+gps_coord = None
+source = None
+
+if mode == "カメラ":
+    pic = st.camera_input("写真を撮ってください")
+    if pic:
+        with open("camera.jpg", "wb") as f:
+            f.write(pic.read())
+        gps = streamlit_js_eval(js_expressions="navigator.geolocation.getCurrentPosition", key="loc")
+        if isinstance(gps, dict) and 'lat' in gps:
+            gps_coord = (gps['lat'], gps['lon'])
+            st.success(f"📍 GPS: {gps_coord}（スマホ）")
+        else:
+            gps_coord, source = get_best_gps("camera.jpg")
+            if gps_coord:
+                st.warning(f"📍 スマホJS失敗 → 代替位置（{source}）: {gps_coord}")
+            else:
+                st.error("📡 GPSがどの手段でも取得できませんでした")
+
+else:
+    files = st.file_uploader("画像や動画を選んでください", type=["jpg", "jpeg", "png", "mp4", "avi"], accept_multiple_files=True)
+    if files:
+        tmp = "uploads"
+        os.makedirs(tmp, exist_ok=True)
+        for up in files:
+            path = os.path.join(tmp, up.name)
+            Path(path).write_bytes(up.read())
+            ext = Path(path).suffix.lower()
+            gps, gps_source = get_best_gps(path if ext in [".jpg", ".jpeg", ".png"] else None)
+            if gps:
+                st.success(f"📍 {up.name} の位置情報 ({gps_source}): {gps}")
+            else:
+                st.warning(f"📡 {up.name} のGPS情報を取得できませんでした")
+
+use_manual = st.checkbox("📌 手動で位置情報を指定する")
+if use_manual:
+    lat = st.number_input("緯度", format="%.6f")
+    lon = st.number_input("経度", format="%.6f")
+    gps_coord = (lat, lon)
+    st.success(f"📍 手動設定された座標: {gps_coord}")
+
+
 # --- ユーティリティ ---
 def compute_index(img):
     rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -134,9 +222,12 @@ if mode == "スマホカメラ":
             folium.Marker(gps_coord, tooltip="現在地").add_to(m)
             st_folium(m, width=700, height=500)
 
+
 # --- PCカメラモード ---
 elif mode == "PCカメラ":
-    st.header("💻 PCカメラ 処理")
+    st.header("💻 PCカメラ処理 + インデックス抽出")
+    idx_type_cam = st.selectbox("📷 使用インデックス", ["VWRI", "VARI", "RI"], key="cam_idx")
+    cam_min, cam_max = st.slider("📷 インデックス抽出範囲", -1.0, 1.0, (-0.2, 0.2), step=0.01)
     cams = [i for i in range(5) if cv2.VideoCapture(i).read()[0]]
     cam_id = st.selectbox("カメラ選択", cams)
     run = st.checkbox("開始")
@@ -150,57 +241,70 @@ elif mode == "PCカメラ":
             ok, frm = cap.read()
             if not ok: break
             frm = cv2.resize(frm, (640, 480))
-            vis, mask, pct = analyze(frm)
+            idx_map = compute_index(frm, idx_type_cam)
+            mask = ((idx_map >= cam_min) & (idx_map <= cam_max)).astype(np.uint8) * 255
+            pct = 100 * np.mean(mask > 0)
+            vis = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
             out.write(vis)
-            img_area.image(vis, caption=f"クラスタ{cluster_id}: {pct:.1f}%", use_column_width=True)
-            recs.append({"src": "pc_frame", "pct": pct, "gps": gps})
+            img_area.image(vis, caption=f"{idx_type_cam} 抽出マスク - {pct:.1f}%", use_column_width=True)
+            recs.append({"src": f"cam_frame_{len(recs)}", "pct": pct, "gps_lat": gps[0] if gps else None, "gps_lon": gps[1] if gps else None})
             if st.button("停止"): break
         cap.release(); out.release()
         st.video("pc_cam.avi")
         df = pd.DataFrame(recs); st.dataframe(df)
-
-# --- アップロード処理 ---
-else:
-    st.header("📁 アップロード処理")
-    files = st.file_uploader("画像または動画をアップロード", type=["jpg", "jpeg", "png", "mp4", "avi"], accept_multiple_files=True)
-    if files:
-        stats, gps_pts = [], []
-        with TemporaryDirectory() as tmp:
-            for up in files:
-                path = os.path.join(tmp, up.name)
-                Path(path).write_bytes(up.read())
-                ext = Path(path).suffix.lower()
-                if ext in [".jpg", ".jpeg", ".png"]:
-                    img = cv2.imread(path)
-                    if resize_ratio < 1.0:
-                        img = cv2.resize(img, (0, 0), fx=resize_ratio, fy=resize_ratio)
-                    gps = exif_gps(path)
-                    for name, region in quadrants(img).items():
-                        vis, mask, pct = analyze(region)
-                        st.image(vis, caption=f"{up.name} - {name}")
-                        stats.append({"src": f"{up.name}_{name}", "pct": pct, "gps": gps})
-                        if gps: gps_pts.append((gps, pct))
-                elif ext in [".mp4", ".avi"]:
-                    cap = cv2.VideoCapture(path)
-                    w, h = int(cap.get(3)), int(cap.get(4)); fps = cap.get(5)
-                    out_path = os.path.join(tmp, Path(up.name).stem + "_proc.avi")
-                    out = cv2.VideoWriter(out_path, cv2.VideoWriter_fourcc(*'XVID'), fps, (w, h))
-                    pbar = st.progress(0); total = int(cap.get(7))
-                    for i in range(total):
-                        ret, frame = cap.read()
-                        if not ret: break
-                        vis, mask, pct = analyze(frame)
-                        out.write(vis)
-                        stats.append({"src": f"{up.name}_fr{i}", "pct": pct, "gps": None})
-                        pbar.progress((i+1)/total)
-                    cap.release(); out.release()
-                    st.video(out_path)
-                    with open(out_path, 'rb') as v: st.download_button("動画DL", v.read(), file_name=Path(out_path).name)
-        if gps_pts:
-            m = folium.Map(location=gps_pts[0][0], zoom_start=6)
-            for (latlon, p) in gps_pts:
-                folium.Circle(latlon, radius=p*10, color='green', fill=True).add_to(m)
+        st.download_button("📥 CSVダウンロード", df.to_csv(index=False), "pc_index_mask.csv")
+        if gps:
+            m = folium.Map(location=gps, zoom_start=15)
+            for row in recs:
+                if row["gps_lat"]:
+                    folium.Circle([row["gps_lat"], row["gps_lon"]], radius=row["pct"]*10, color='blue', fill=True).add_to(m)
+            st.subheader("🗺 PCマップ")
             st_folium(m, width=700, height=500)
-        df = pd.DataFrame(stats)
-        st.dataframe(df)
-        st.download_button("📥 CSVダウンロード", df.to_csv(index=False), "cluster_stats.csv")
+
+# --- スマホカメラモード ---
+elif mode == "スマホカメラ":
+    st.header("📱 スマホカメラ + GPS + インデックス抽出")
+    gps = streamlit_js_eval(js_expressions="navigator.geolocation.getCurrentPosition((p)=>{return {lat:p.coords.latitude, lon:p.coords.longitude};})", key="gps", ttl=1000)
+    if isinstance(gps, dict) and 'lat' in gps:
+        gps_coord = (gps['lat'], gps['lon'])
+        st.success(f"📍 GPS: {gps_coord}")
+    else:
+        gps_coord = None
+        st.warning("📡 位置情報を取得できません（ブラウザの位置許可を確認）")
+
+    idx_type_mobile = st.selectbox("📱 使用インデックス", ["VWRI", "VARI", "RI"], key="mobile_idx")
+    mob_min, mob_max = st.slider("📱 インデックス抽出範囲", -1.0, 1.0, (-0.2, 0.2), step=0.01)
+
+    class CamProcessor(VideoProcessorBase):
+        def __init__(self): self.pct = 0; self.mask = None; self.history = []
+        def recv(self, frame):
+            img = frame.to_ndarray(format="bgr24")
+            idx_map = compute_index(img, idx_type_mobile)
+            mask = ((idx_map >= mob_min) & (idx_map <= mob_max)).astype(np.uint8) * 255
+            self.pct, self.mask = 100 * np.mean(mask > 0), mask
+            if gps_coord:
+                self.history.append({"src": f"mobile_frame_{len(self.history)}", "pct": self.pct, "gps_lat": gps_coord[0], "gps_lon": gps_coord[1]})
+            return av.VideoFrame.from_ndarray(cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR), format="bgr24")
+
+    ctx = webrtc_streamer(
+        key="mobile",
+        mode=WebRtcMode.SENDRECV,
+        video_processor_factory=CamProcessor,
+        media_stream_constraints={"video": {"facingMode": {"exact": "environment"}}, "audio": False},
+        async_processing=True,
+    )
+
+    if ctx.video_processor:
+        st.metric(f"抽出割合", f"{ctx.video_processor.pct:.2f}%")
+        st.image(ctx.video_processor.mask, caption="抽出マスク", use_column_width=True)
+        df = pd.DataFrame(ctx.video_processor.history)
+        if not df.empty:
+            st.subheader("📊 スマホ 統計")
+            st.dataframe(df)
+            st.download_button("📥 CSV", df.to_csv(index=False), "mobile_index_mask.csv")
+            if gps_coord:
+                m = folium.Map(location=gps_coord, zoom_start=15)
+                for _, row in df.iterrows():
+                    folium.Circle([row["gps_lat"], row["gps_lon"]], radius=row["pct"]*10, color='red', fill=True).add_to(m)
+                st.subheader("🗺 スマホマップ")
+                st_folium(m, width=700, height=500)
