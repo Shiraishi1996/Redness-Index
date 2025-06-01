@@ -1,14 +1,10 @@
-mercantile
-mapbox-vector-tile
-requests
-jsonschema
-os-sys
-vt2geojson
-opencv-python-headless  # cv2 用
-numpy
-glob2
-pandas
-folium
-pillow  # PIL
 streamlit
+opencv-python-headless
+numpy
+scikit-learn
+pandas
+matplotlib
+Pillow
+folium
 streamlit-folium
+geocoder
