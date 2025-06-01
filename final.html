@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>画像クラスタリング × 地図</title>
+  <style>
+    #map { height: 500px; margin-top: 20px; }
+    canvas { display: none; }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+</head>
+<body>
+<h2>📷 クラスタリング × GPS × 地図描画</h2>
+
+<input type="file" id="imageInput" accept="image/*"><br><br>
+
+インデックス:
+<label><input type="radio" name="index" value="RI" checked> RI</label>
+<label><input type="radio" name="index" value="VARI"> VARI</label>
+<label><input type="radio" name="index" value="VWRI"> VWRI</label><br><br>
+
+<p>画像をクリックしてクラスタを選択してください。</p>
+<canvas id="canvas"></canvas>
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+
+<script>
+let map = L.map('map').setView([35.681236, 139.767125], 13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+let markers = L.markerClusterGroup();
+map.addLayer(markers);
+
+let selectedCluster = 0;
+let clusterCenters = [];
+let clusterLabels = [];
+
+document.getElementById('imageInput').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  const img = new Image();
+  img.src = URL.createObjectURL(file);
+
+  img.onload = () => {
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    canvas.width = img.width; canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    const { data } = ctx.getImageData(0, 0, img.width, img.height);
+    const indexType = document.querySelector('input[name="index"]:checked').value;
+    const pixels = [];
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      let v = 0;
+      if (indexType === 'RI') v = (g - r) / (g + r + 1e-5);
+      else if (indexType === 'VARI') v = (g - r) / (g + r - b + 1e-5);
+      else if (indexType === 'VWRI') v = (g - r - b) / (g + r + b + 1e-5);
+      pixels.push([v]);
+    }
+
+    // K-means (クラスタ数4)
+    const k = 4;
+    clusterCenters = Array.from({ length: k }, () => [Math.random() * 2 - 1]);
+    clusterLabels = new Array(pixels.length);
+
+    for (let iter = 0; iter < 10; iter++) {
+      // 割当
+      for (let i = 0; i < pixels.length; i++) {
+        let dists = clusterCenters.map(c => Math.abs(c[0] - pixels[i][0]));
+        clusterLabels[i] = dists.indexOf(Math.min(...dists));
+      }
+      // 再計算
+      for (let j = 0; j < k; j++) {
+        let members = pixels.filter((_, i) => clusterLabels[i] === j);
+        let mean = members.reduce((sum, v) => sum + v[0], 0) / (members.length || 1);
+        clusterCenters[j][0] = mean;
+      }
+    }
+
+    // 地図上に円描画
+    navigator.geolocation.getCurrentPosition(pos => {
+      const lat = pos.coords.latitude;
+      const lon = pos.coords.longitude;
+
+      markers.clearLayers();
+
+      for (let cid = 0; cid < k; cid++) {
+        const count = clusterLabels.filter(x => x === cid).length;
+        const pct = count / clusterLabels.length * 100;
+        const radius = pct * 10;
+        const circle = L.circle([lat + 0.001 * cid, lon + 0.001 * cid], {
+          radius: radius,
+          color: cid === selectedCluster ? 'red' : 'blue',
+          fillOpacity: 0.5
+        }).bindPopup(`クラスタ${cid}<br>割合: ${pct.toFixed(2)}%`);
+        markers.addLayer(circle);
+      }
+
+      map.setView([lat, lon], 15);
+    });
+  };
+
+  // 画像クリック → クラスタ選択
+  img.onclick = e => {
+    const canvas = document.getElementById('canvas');
+    const x = e.offsetX, y = e.offsetY;
+    const i = y * canvas.width + x;
+    const label = clusterLabels[i];
+    selectedCluster = label;
+    alert(`クラスタ${label}を選択しました`);
+  };
+});
+</script>
+</body>
+</html>
