@@ -305,6 +305,15 @@ elif mode == "スマホカメラ":
             if gps_coord:
                 m = folium.Map(location=gps_coord, zoom_start=15)
                 for _, row in df.iterrows():
-                    folium.Circle([row["gps_lat"], row["gps_lon"]], radius=row["pct"]*10, color='red', fill=True).add_to(m)
+                    # 半径を「対象クラスタの割合（%）」に基づくスケーリングに変更（例: 1% → 半径10m）
+                    scaled_radius = row["pct"] * 10  # 任意の係数（調整可）
+                    folium.Circle(
+                        location=[row["gps_lat"], row["gps_lon"]],
+                        radius=scaled_radius,
+                        color='red',
+                        fill=True,
+                        fill_opacity=0.6,
+                        tooltip=f"{row['pct']:.1f}%"
+                    ).add_to(m)
                 st.subheader("🗺 スマホマップ")
                 st_folium(m, width=700, height=500)
