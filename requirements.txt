@@ -8,3 +8,6 @@ Pillow
 folium
 streamlit-folium
 geocoder
+streamlit-webrtc
+av
+streamlit-js-eval
